@@ -292,17 +292,46 @@ boundaryConditions = iron.BoundaryConditions()
 solverEquations.BoundaryConditionsCreateStart(boundaryConditions)
 
 # Set maximum concentration (1) for nodes at the inlet
+min_x_inlet = []
+max_x_inlet = []
+
 for inlet_node in inlet_node_array:
-    boundaryConditions.SetNode(dependentField,iron.FieldVariableTypes.U,1,1,int(inlet_node),1,iron.BoundaryConditionsTypes.FIXED,1.0) 
+    boundaryConditions.SetNode(dependentField,iron.FieldVariableTypes.U,1,1,int(inlet_node),1,iron.BoundaryConditionsTypes.FIXED,1.0)
+
+    x = geometricField.ParameterSetGetNodeDP(iron.FieldVariableTypes.U, iron.FieldParameterSetTypes.VALUES, 1, 1,
+                                             inlet_node, 1)
+
+    if x < min_x_inlet or min_x_inlet == []:
+        min_x_inlet = x
+    elif x > max_x_inlet or max_x_inlet == []:
+        max_x_inlet = x
+
+width_inlet = max_x_inlet - min_x_inlet
+
+min_x_outlet = []
+max_x_outlet = []
 
 # Set minimum concentration (0) for nodes at the outlet
 for outlet_node in outlet_node_array:
-    boundaryConditions.SetNode(dependentField,iron.FieldVariableTypes.U,1,1,int(outlet_node),1,iron.BoundaryConditionsTypes.FIXED,0.0) 
+    boundaryConditions.SetNode(dependentField,iron.FieldVariableTypes.U,1,1,int(outlet_node),1,iron.BoundaryConditionsTypes.FIXED,0.0)
+
+    x = geometricField.ParameterSetGetNodeDP(iron.FieldVariableTypes.U, iron.FieldParameterSetTypes.VALUES, 1, 1,
+                                             outlet_node, 1)
+
+    if x < min_x_outlet or min_x_outlet == []:
+        min_x_outlet = x
+    elif x > max_x_outlet or max_x_outlet == []:
+        max_x_outlet = x
+
+width_outlet = max_x_outlet - min_x_outlet
 
 solverEquations.BoundaryConditionsCreateFinish()
 
 # Solve the problem
 problem.Solve()
+
+print 'Width of acinus duct is ', width_inlet
+print 'Width of outlet is ', width_outlet
 
 # Export results as fml files for the geometric field and the dependent field (.geometric and .phi respectively). Outputs a .xml file.
 baseName = "laplace"
