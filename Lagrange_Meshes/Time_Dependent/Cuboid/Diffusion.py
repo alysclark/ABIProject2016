@@ -115,7 +115,23 @@ equationsSet.DependentCreateFinish()
 # Create material field
 materialField = iron.Field()
 equationsSet.MaterialsCreateStart(materialFieldUserNumber,materialField)
+
+# Sets the material field component number
+materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 1, 1)
+
+materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 2, 1)
+
+materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 3, 1)
+
+# Change to nodal based interpolation
+materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,1,iron.FieldInterpolationTypes.NODE_BASED)
+
+materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,2,iron.FieldInterpolationTypes.NODE_BASED)
+
+materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,3,iron.FieldInterpolationTypes.NODE_BASED)
+
 equationsSet.MaterialsCreateFinish()
+
 ## I believe this will change the diffusion coeff
 materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,diff_coeff)
 materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,2,diff_coeff)
@@ -188,7 +204,8 @@ solverEquations.BoundaryConditionsCreateFinish()
 
 iron.DiagnosticsSetOn(1,[1,2,3,4,5],"Diagnostics",["all"])
 problem.Solve()
-iron.DiagnosticsSetOff()
+# iron.DiagnosticsSetOff()
+
 # Export results
 baseName = "Diffusion"
 dataFormat = "PLAIN_TEXT"
