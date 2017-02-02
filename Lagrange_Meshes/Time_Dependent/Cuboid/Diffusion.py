@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Intialise OpenCMISS-Iron
+# Initialise OpenCMISS-Iron
 from opencmiss.iron import iron
 
 # parameters.parse()
@@ -11,7 +11,7 @@ width = 2.0
 length = 3.0
 diff_coeff = 1.0
 initial_conc= 0.5
-start_time = 0.0 
+start_time = 0.0
 end_time = 1.0
 time_step = 0.01
 screen_output_freq = 2 #how many time steps between outputs to screen
@@ -33,7 +33,6 @@ numberGlobalXElements = 5
 numberGlobalYElements = 5
 numberGlobalZElements = 5
 
-
 numberOfComputationalNodes = iron.ComputationalNumberOfNodesGet()
 computationalNodeNumber = iron.ComputationalNodeNumberGet()
 
@@ -50,16 +49,12 @@ region.label = "DiffusionRegion"
 region.coordinateSystem = coordinateSystem
 region.CreateFinish()
 
-# Create a tri-linear lagrange basis
+# Create a tri-linear simplex basis
 basis = iron.Basis()
 basis.CreateStart(basisUserNumber)
-
-
 basis.TypeSet(iron.BasisTypes.SIMPLEX)
 basis.numberOfXi = 3
-#basis.interpolationXi = [iron.BasisInterpolationSpecifications.LINEAR_LAGRANGE]*3
 basis.interpolationXi = [iron.BasisInterpolationSpecifications.LINEAR_SIMPLEX]*3
-#basis.quadratureNumberOfGaussXi = [2]*3
 basis.CreateFinish()
 
 # Create a generated mesh
@@ -73,6 +68,7 @@ generatedMesh.numberOfElements = [numberGlobalXElements,numberGlobalYElements,nu
 mesh = iron.Mesh()
 generatedMesh.CreateFinish(meshUserNumber,mesh)
 
+# Check number of elements
 numberOfElements = mesh.numberOfElements
 print("number of elements: " + str(numberOfElements))
 
@@ -186,9 +182,11 @@ solverEquations.BoundaryConditionsCreateFinish()
 
 ## Solve the problem
 
-iron.DiagnosticsSetOn(1,[1,2,3,4,5],"Diagnostics",["all"])
+iron.DiagnosticsSetOn(iron.DiagnosticTypes.IN,[1,2,3,4,5],"Diagnostics",["DOMAIN_MAPPINGS_LOCAL_FROM_GLOBAL_CALCULATE"])
+#iron.DiagnosticsSetOn(1,[1,2,3,4,5],"Diagnostics",["all"])
 problem.Solve()
-iron.DiagnosticsSetOff()
+#iron.DiagnosticsSetOff()
+
 # Export results
 baseName = "Diffusion"
 dataFormat = "PLAIN_TEXT"
