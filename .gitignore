@@ -89,8 +89,11 @@ ENV/
 .ropeproject
 
 # OpenCMISS Output
-.node
-.xml
-.exelem
-.exnode
-.connectivity
+*.node
+*.xml
+*.exelem
+*.exnode
+*.connectivity
+
+# Temp files
+*~
