@@ -99,7 +99,7 @@ def read_ansys_mesh(mesh_dir, filename, nodes_subset=[], elem_subset=[], debug=F
         if line.split(',')[0] == 'CMBLOCK' and line.split(',')[1] == 'OUTLET':
             for node_line_idx in range(line_idx+2, num_lines+1):
                 node_line = lines[node_line_idx]
-                if node_line == '/GOLIST\n':
+                if node_line.split(',')[0] == 'CMBLOCK':
                     break
                 else:
                     outlet_node_row = node_line.split()
