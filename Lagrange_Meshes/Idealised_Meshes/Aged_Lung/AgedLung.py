@@ -113,7 +113,7 @@ def read_ansys_mesh(mesh_dir, filename, nodes_subset=[], elem_subset=[], debug=F
 
 # Call the code which reads the ansys mesh
 [node_array, node_coordinates, element_array, element_nodes_array, inlet_node_array, outlet_node_array] = read_ansys_mesh(
-    './', 'AgedDuct.in')
+    './', 'UpdatedAgedDuct.in')
 
 # Changing the values in each array to 32 bit integers
 node_array = node_array.astype(numpy.int32)
