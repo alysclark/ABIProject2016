@@ -82,7 +82,7 @@ def read_ansys_mesh(mesh_dir, filename, nodes_subset=[], elem_subset=[], debug=F
 
     # Find which nodes are part of the inlet
     for line_idx, line in enumerate(lines):
-        if line.split(',')[0] == 'CMBLOCK' and line.split(',')[1] == 'MOUTH':
+        if line.split(',')[0] == 'CMBLOCK' and line.split(',')[1] == 'INLET':
             for node_line_idx in range(line_idx+2, num_lines+1):
                 node_line = lines[node_line_idx]
                 if node_line.split(',')[0] == 'CMBLOCK':
