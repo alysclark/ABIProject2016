@@ -98,23 +98,3 @@ ENV/
 
 # Temp files
 *~
-/Lagrange_Meshes/Regular_Meshes/Changed_BC/io.py
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.geometric.dofs.node
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.phi.dofs.node
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.py
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.component1.connectivity
-!/Lagrange_Meshes/Time_Dependent/Cuboid/DiffusionResults.part0.exnode
-!/Lagrange_Meshes/Time_Dependent/Cuboid/DiffusionExample.xml
-!/Lagrange_Meshes/Time_Dependent/Cuboid/DiffusionResults.part0.exelem
-/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.phi.dofs.node
-/Lagrange_Meshes/Time_Dependent/Cuboid/DiffusionResults.part0.exelem
-/Lagrange_Meshes/Time_Dependent/Cuboid/DiffusionResults.part0.exnode
-/Lagrange_Meshes/Time_Dependent/Cuboid/DiffusionExample.xml
-/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.component1.connectivity
-/Lagrange_Meshes/Time_Dependent/Cuboid/Diffusion.geometric.dofs.node
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Expected_Results/DiffusionResults.part0.exnode
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Expected_Results/Diffusion.component1.connectivity
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Expected_Results/Diffusion.phi.dofs.node
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Expected_Results/DiffusionExample.xml
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Expected_Results/Diffusion.geometric.dofs.node
-!/Lagrange_Meshes/Time_Dependent/Cuboid/Expected_Results/DiffusionResults.part0.exelem

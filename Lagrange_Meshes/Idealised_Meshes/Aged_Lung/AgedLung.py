@@ -113,7 +113,7 @@ def read_ansys_mesh(mesh_dir, filename, nodes_subset=[], elem_subset=[], debug=F
 
 # Call the code which reads the ansys mesh
 [node_array, node_coordinates, element_array, element_nodes_array, inlet_node_array, outlet_node_array] = read_ansys_mesh(
-    './', 'UpdatedAgedDuct.in')
+    './', 'AgedDuct.in')
 
 # Changing the values in each array to 32 bit integers
 node_array = node_array.astype(numpy.int32)
@@ -404,14 +404,14 @@ fml.OutputAddFieldNoType(baseName+".geometric", dataFormat, geometricField,
     iron.FieldVariableTypes.U, iron.FieldParameterSetTypes.VALUES)
 fml.OutputAddFieldNoType(baseName+".phi", dataFormat, dependentField,
     iron.FieldVariableTypes.U, iron.FieldParameterSetTypes.VALUES)
-fml.OutputWrite("AgedDuct.xml")
+fml.OutputWrite("AgedLung.xml")
 fml.Finalise()
 
 # Export results
 fields = iron.Fields()
 fields.CreateRegion(region)
-fields.NodesExport("AgedDuctResults","FORTRAN")
-fields.ElementsExport("AgedDuctResults","FORTRAN")
+fields.NodesExport("AgedLungResults","FORTRAN")
+fields.ElementsExport("AgedLungResults","FORTRAN")
 fields.Finalise()
 
 iron.Finalise()
