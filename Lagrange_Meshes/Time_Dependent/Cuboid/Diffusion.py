@@ -74,7 +74,7 @@ mesh = iron.Mesh()
 generatedMesh.CreateFinish(meshUserNumber,mesh)
 
 numberOfElements = mesh.numberOfElements
-print("number of elements: " + str(numberOfElements))
+#print("number of elements: " + str(numberOfElements))
 
 # Create a decomposition for the mesh
 decomposition = iron.Decomposition()
@@ -118,16 +118,12 @@ equationsSet.MaterialsCreateStart(materialFieldUserNumber,materialField)
 
 # Sets the material field component number
 materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 1, 1)
-
 materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 2, 1)
-
 materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 3, 1)
 
 # Change to nodal based interpolation
 materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,1,iron.FieldInterpolationTypes.NODE_BASED)
-
 materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,2,iron.FieldInterpolationTypes.NODE_BASED)
-
 materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,3,iron.FieldInterpolationTypes.NODE_BASED)
 
 equationsSet.MaterialsCreateFinish()
@@ -167,6 +163,7 @@ problem.ControlLoopCreateFinish()
 dynamicsolver = iron.Solver()
 problem.SolversCreateStart()
 problem.SolverGet([iron.ControlLoopIdentifiers.NODE],1,dynamicsolver)
+#dynamicsolver.outputType = iron.SolverOutputTypes.MATRIX
 dynamicsolver.outputType = iron.SolverOutputTypes.PROGRESS
 linearSolver=iron.Solver()
 dynamicsolver.DynamicLinearSolverGet(linearSolver)

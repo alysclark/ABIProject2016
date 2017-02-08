@@ -82,7 +82,7 @@ def read_ansys_mesh(mesh_dir, filename, nodes_subset=[], elem_subset=[], debug=F
 
     # Find which nodes are part of the inlet
     for line_idx, line in enumerate(lines):
-        if line.split(',')[0] == 'CMBLOCK' and line.split(',')[1] == 'MOUTH':
+        if line.split(',')[0] == 'CMBLOCK' and line.split(',')[1] == 'INLET':
             for node_line_idx in range(line_idx+2, num_lines+1):
                 node_line = lines[node_line_idx]
                 if node_line.split(',')[0] == 'CMBLOCK':
@@ -124,6 +124,15 @@ element_nodes_array = element_nodes_array.astype(numpy.int32)
 from opencmiss.iron import iron
 
 # Set problem parameters
+time = raw_input("Is this a time-dependent problem (Y/N)? ")
+
+if time == 'Y':
+    diff_coeff = 0.225 # from readings
+    initial_conc = 0.5
+    start_time = 0.0
+    end_time = 1.0
+    time_step = 0.01
+    screen_output_freq = 2 # how many time steps between outputs to screen
 
 (coordinateSystemUserNumber,
     regionUserNumber,
@@ -134,11 +143,13 @@ from opencmiss.iron import iron
     geometricFieldUserNumber,
     equationsSetFieldUserNumber,
     dependentFieldUserNumber,
+    materialFieldUserNumber,
     equationsSetUserNumber,
-    problemUserNumber) = range(1,12)
+    problemUserNumber) = range(1,13)
 
 iron.DiagnosticsSetOn(iron.DiagnosticTypes.IN,[1,2,3,4,5],"Diagnostics",["DOMAIN_MAPPINGS_LOCAL_FROM_GLOBAL_CALCULATE"])
 
+# Get the computational nodes information
 numberOfComputationalNodes = iron.ComputationalNumberOfNodesGet()
 computationalNodeNumber = iron.ComputationalNodeNumberGet()
 
@@ -231,9 +242,15 @@ geometricField.ParameterSetUpdateFinish(iron.FieldVariableTypes.U,iron.FieldPara
 # Create standard Laplace equations set
 equationsSetField = iron.Field()
 equationsSet = iron.EquationsSet()
-equationsSetSpecification = [iron.EquationsSetClasses.CLASSICAL_FIELD,
-        iron.EquationsSetTypes.LAPLACE_EQUATION,
-        iron.EquationsSetSubtypes.STANDARD_LAPLACE]
+if time == 'Y':
+    equationsSetSpecification = [iron.EquationsSetClasses.CLASSICAL_FIELD,
+            iron.EquationsSetTypes.DIFFUSION_EQUATION,
+            iron.EquationsSetSubtypes.NO_SOURCE_DIFFUSION]
+else:
+    equationsSetSpecification = [iron.EquationsSetClasses.CLASSICAL_FIELD,
+            iron.EquationsSetTypes.LAPLACE_EQUATION,
+            iron.EquationsSetSubtypes.STANDARD_LAPLACE]
+
 equationsSet.CreateStart(equationsSetUserNumber,region,geometricField,
         equationsSetSpecification,equationsSetFieldUserNumber,equationsSetField)
 equationsSet.CreateFinish()
@@ -245,8 +262,34 @@ dependentField.DOFOrderTypeSet(iron.FieldVariableTypes.U,iron.FieldDOFOrderTypes
 dependentField.DOFOrderTypeSet(iron.FieldVariableTypes.DELUDELN,iron.FieldDOFOrderTypes.SEPARATED)
 equationsSet.DependentCreateFinish()
 
-# Initialise dependent field
-dependentField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,0.5)
+# Create material field
+if time == 'Y':
+    materialField = iron.Field()
+    equationsSet.MaterialsCreateStart(materialFieldUserNumber,materialField)
+
+    # Sets the material field component number
+    materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 1, 1)
+    materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 2, 1)
+    materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 3, 1)
+
+    # Change to nodal based interpolation
+    materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,1,iron.FieldInterpolationTypes.NODE_BASED)
+    materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,2,iron.FieldInterpolationTypes.NODE_BASED)
+    materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,3,iron.FieldInterpolationTypes.NODE_BASED)
+
+    equationsSet.MaterialsCreateFinish()
+
+    # Changing diffusion coefficient
+    materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,diff_coeff)
+    materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,2,diff_coeff)
+    materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,3,diff_coeff)
+
+    # Initialise dependent field
+    dependentField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,initial_conc)
+
+else:
+    # Initialise dependent field
+    dependentField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,0.5)
 
 # Create equations
 equations = iron.Equations()
@@ -255,26 +298,47 @@ equations.sparsityType = iron.EquationsSparsityTypes.SPARSE
 equations.outputType = iron.EquationsOutputTypes.NONE
 equationsSet.EquationsCreateFinish()
 
-# Create Laplace problem
+# Create problem
 problem = iron.Problem()
-problemSpecification = [iron.ProblemClasses.CLASSICAL_FIELD,
-        iron.ProblemTypes.LAPLACE_EQUATION,
-        iron.ProblemSubtypes.STANDARD_LAPLACE]
+if time == 'Y':
+    problemSpecification = [iron.ProblemClasses.CLASSICAL_FIELD,
+        iron.ProblemTypes.DIFFUSION_EQUATION,
+        iron.ProblemSubtypes.NO_SOURCE_DIFFUSION]
+else:
+    problemSpecification = [iron.ProblemClasses.CLASSICAL_FIELD,
+            iron.ProblemTypes.LAPLACE_EQUATION,
+            iron.ProblemSubtypes.STANDARD_LAPLACE]
 problem.CreateStart(problemUserNumber, problemSpecification)
 problem.CreateFinish()
 
 # Create control loops
 problem.ControlLoopCreateStart()
+if time == 'Y':
+    controlLoop = iron.ControlLoop()
+    problem.ControlLoopGet([iron.ControlLoopIdentifiers.NODE], controlLoop)
+    controlLoop.TimesSet(start_time, end_time, time_step)
+    controlLoop.TimeOutputSet(screen_output_freq)
 problem.ControlLoopCreateFinish()
 
 # Create problem solver
-solver = iron.Solver()
-problem.SolversCreateStart()
-problem.SolverGet([iron.ControlLoopIdentifiers.NODE],1,solver)
-solver.outputType = iron.SolverOutputTypes.SOLVER
-solver.linearType = iron.LinearSolverTypes.ITERATIVE
-solver.linearIterativeAbsoluteTolerance = 1.0E-12
-solver.linearIterativeRelativeTolerance = 1.0E-12
+if time == 'Y':
+    dynamicSolver = iron.Solver()
+    problem.SolversCreateStart()
+    problem.SolverGet([iron.ControlLoopIdentifiers.NODE], 1, dynamicSolver)
+    dynamicSolver.outputType = iron.SolverOutputTypes.PROGRESS
+    linearSolver = iron.Solver()
+    dynamicSolver.DynamicLinearSolverGet(linearSolver)
+    linearSolver.outputType = iron.SolverOutputTypes.NONE
+    linearSolver.linearType = iron.LinearSolverTypes.ITERATIVE
+    linearSolver.LinearIterativeMaximumIterationsSet(1000)
+else:
+    solver = iron.Solver()
+    problem.SolversCreateStart()
+    problem.SolverGet([iron.ControlLoopIdentifiers.NODE],1,solver)
+    solver.outputType = iron.SolverOutputTypes.SOLVER
+    solver.linearType = iron.LinearSolverTypes.ITERATIVE
+    solver.linearIterativeAbsoluteTolerance = 1.0E-12
+    solver.linearIterativeRelativeTolerance = 1.0E-12
 problem.SolversCreateFinish()
 
 # Create solver equations and add equations set to solver equations
@@ -304,7 +368,7 @@ for inlet_node in inlet_node_array:
         min_x_inlet = x
     elif x > max_x_inlet or max_x_inlet == []:
         max_x_inlet = x
-
+#import pdb; pdb.set_trace()
 width_inlet = max_x_inlet - min_x_inlet
 
 min_x_outlet = []

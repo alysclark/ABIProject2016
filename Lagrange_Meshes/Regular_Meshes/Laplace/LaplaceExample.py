@@ -1,67 +1,25 @@
 #!/usr/bin/env python
 
-#> \file
-#> \author Chris Bradley
-#> \brief This is an example script to solve a Laplace problem using OpenCMISS-Iron calls in python.
-#>
-#> \section LICENSE
-#>
-#> Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#>
-#> The contents of this file are subject to the Mozilla Public License
-#> Version 1.1 (the "License"); you may not use this file except in
-#> compliance with the License. You may obtain a copy of the License at
-#> http://www.mozilla.org/MPL/
-#>
-#> Software distributed under the License is distributed on an "AS IS"
-#> basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
-#> License for the specific language governing rights and limitations
-#> under the License.
-#>
-#> The Original Code is OpenCMISS
-#>
-#> The Initial Developer of the Original Code is University of Auckland,
-#> Auckland, New Zealand and University of Oxford, Oxford, United
-#> Kingdom. Portions created by the University of Auckland and University
-#> of Oxford are Copyright (C) 2007 by the University of Auckland and
-#> the University of Oxford. All Rights Reserved.
-#>
-#> Contributor(s): Adam Reeve
-#>
-#> Alternatively, the contents of this file may be used under the terms of
-#> either the GNU General Public License Version 2 or later (the "GPL"), or
-#> the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-#> in which case the provisions of the GPL or the LGPL are applicable instead
-#> of those above. if you wish to allow use of your version of this file only
-#> under the terms of either the GPL or the LGPL, and not to allow others to
-#> use your version of this file under the terms of the MPL, indicate your
-#> decision by deleting the provisions above and replace them with the notice
-#> and other provisions required by the GPL or the LGPL. if you do not delete
-#> the provisions above, a recipient may use your version of this file under
-#> the terms of any one of the MPL, the GPL or the LGPL.
-#>
-
-#> \example ClassicalField/Laplace/LaplacePy/LaplaceExample.py
-## Example script to solve a Laplace problem using OpenCMISS-Iron calls in python.
-## \par Latest Builds:
-## \li <a href='http://autotest.bioeng.auckland.ac.nz/opencmiss-build/logs_x86_64-linux/ClassicalField/Laplace/LaplacePy/build-intel'>Linux Intel Build</a>
-## \li <a href='http://autotest.bioeng.auckland.ac.nz/opencmiss-build/logs_x86_64-linux/ClassicalField/Laplace/LaplacePy/build-gnu'>Linux GNU Build</a>
-#<
-
-
 # Add Python bindings directory to PATH
 import sys, os
-# sys.path.append(os.sep.join((os.environ['OPENCMISS_ROOT'],'cm','bindings','python')))
 
 # Intialise OpenCMISS-Iron
 from opencmiss.iron import iron
-
-# parameters.parse()
 
 # Set problem parameters
 height = 1.0
 width = 2.0
 length = 3.0
+
+time = raw_input("Is this a time-dependent problem (Y/N)? ")
+
+if time == 'Y':
+    diff_coeff = 0.225 # from readings
+    initial_conc = 0.5
+    start_time = 0.0
+    end_time = 1.0
+    time_step = 0.01
+    screen_output_freq = 2 # how many time steps between outputs to screen
 
 (coordinateSystemUserNumber,
     regionUserNumber,
@@ -72,8 +30,9 @@ length = 3.0
     geometricFieldUserNumber,
     equationsSetFieldUserNumber,
     dependentFieldUserNumber,
+    materialFieldUserNumber,
     equationsSetUserNumber,
-    problemUserNumber) = range(1,12)
+    problemUserNumber) = range(1,13)
 
 numberGlobalXElements = 5
 numberGlobalYElements = 5
@@ -100,13 +59,9 @@ region.CreateFinish()
 # Create a tri-linear lagrange basis
 basis = iron.Basis()
 basis.CreateStart(basisUserNumber)
-
 basis.TypeSet(iron.BasisTypes.LAGRANGE_HERMITE_TP)
-#basis.TypeSet(iron.BasisTypes.SIMPLEX)
 basis.numberOfXi = 3
 basis.interpolationXi = [iron.BasisInterpolationSpecifications.LINEAR_LAGRANGE]*3
-#basis.interpolationXi = [iron.BasisInterpolationSpecifications.LINEAR_SIMPLEX]*3
-#basis.quadratureNumberOfGaussXi = [2]*3
 basis.CreateFinish()
 
 # Create a generated mesh
@@ -142,9 +97,14 @@ generatedMesh.GeometricParametersCalculate(geometricField)
 # Create standard Laplace equations set
 equationsSetField = iron.Field()
 equationsSet = iron.EquationsSet()
-equationsSetSpecification = [iron.EquationsSetClasses.CLASSICAL_FIELD,
-        iron.EquationsSetTypes.LAPLACE_EQUATION,
-        iron.EquationsSetSubtypes.STANDARD_LAPLACE]
+if time == 'Y':
+    equationsSetSpecification = [iron.EquationsSetClasses.CLASSICAL_FIELD,
+            iron.EquationsSetTypes.DIFFUSION_EQUATION,
+            iron.EquationsSetSubtypes.NO_SOURCE_DIFFUSION]
+else:
+    equationsSetSpecification = [iron.EquationsSetClasses.CLASSICAL_FIELD,
+            iron.EquationsSetTypes.LAPLACE_EQUATION,
+            iron.EquationsSetSubtypes.STANDARD_LAPLACE]
 equationsSet.CreateStart(equationsSetUserNumber,region,geometricField,
         equationsSetSpecification,equationsSetFieldUserNumber,equationsSetField)
 equationsSet.CreateFinish()
@@ -156,8 +116,34 @@ dependentField.DOFOrderTypeSet(iron.FieldVariableTypes.U,iron.FieldDOFOrderTypes
 dependentField.DOFOrderTypeSet(iron.FieldVariableTypes.DELUDELN,iron.FieldDOFOrderTypes.SEPARATED)
 equationsSet.DependentCreateFinish()
 
-# Initialise dependent field
-dependentField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,0.5)
+# Create material field
+if time == 'Y':
+    materialField = iron.Field()
+    equationsSet.MaterialsCreateStart(materialFieldUserNumber,materialField)
+
+    # Sets the material field component number
+    materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 1, 1)
+    materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 2, 1)
+    materialField.ComponentMeshComponentSet(iron.FieldVariableTypes.U, 3, 1)
+
+    # Change to nodal based interpolation
+    materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,1,iron.FieldInterpolationTypes.NODE_BASED)
+    materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,2,iron.FieldInterpolationTypes.NODE_BASED)
+    materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,3,iron.FieldInterpolationTypes.NODE_BASED)
+
+    equationsSet.MaterialsCreateFinish()
+
+    # Changing diffusion coefficient
+    materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,diff_coeff)
+    materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,2,diff_coeff)
+    materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,3,diff_coeff)
+
+    # Initialise dependent field
+    dependentField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,initial_conc)
+
+else:
+    # Initialise dependent field
+    dependentField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,0.5)
 
 # Create equations
 equations = iron.Equations()
@@ -166,26 +152,47 @@ equations.sparsityType = iron.EquationsSparsityTypes.SPARSE
 equations.outputType = iron.EquationsOutputTypes.NONE
 equationsSet.EquationsCreateFinish()
 
-# Create Laplace problem
+# Create problem
 problem = iron.Problem()
-problemSpecification = [iron.ProblemClasses.CLASSICAL_FIELD,
-        iron.ProblemTypes.LAPLACE_EQUATION,
-        iron.ProblemSubtypes.STANDARD_LAPLACE]
+if time == 'Y':
+    problemSpecification = [iron.ProblemClasses.CLASSICAL_FIELD,
+        iron.ProblemTypes.DIFFUSION_EQUATION,
+        iron.ProblemSubtypes.NO_SOURCE_DIFFUSION]
+else:
+    problemSpecification = [iron.ProblemClasses.CLASSICAL_FIELD,
+            iron.ProblemTypes.LAPLACE_EQUATION,
+            iron.ProblemSubtypes.STANDARD_LAPLACE]
 problem.CreateStart(problemUserNumber, problemSpecification)
 problem.CreateFinish()
 
 # Create control loops
 problem.ControlLoopCreateStart()
+if time == 'Y':
+    controlLoop = iron.ControlLoop()
+    problem.ControlLoopGet([iron.ControlLoopIdentifiers.NODE], controlLoop)
+    controlLoop.TimesSet(start_time, end_time, time_step)
+    controlLoop.TimeOutputSet(screen_output_freq)
 problem.ControlLoopCreateFinish()
 
 # Create problem solver
-solver = iron.Solver()
-problem.SolversCreateStart()
-problem.SolverGet([iron.ControlLoopIdentifiers.NODE],1,solver)
-solver.outputType = iron.SolverOutputTypes.SOLVER
-solver.linearType = iron.LinearSolverTypes.ITERATIVE
-solver.linearIterativeAbsoluteTolerance = 1.0E-12
-solver.linearIterativeRelativeTolerance = 1.0E-12
+if time == 'Y':
+    dynamicSolver = iron.Solver()
+    problem.SolversCreateStart()
+    problem.SolverGet([iron.ControlLoopIdentifiers.NODE], 1, dynamicSolver)
+    dynamicSolver.outputType = iron.SolverOutputTypes.PROGRESS
+    linearSolver = iron.Solver()
+    dynamicSolver.DynamicLinearSolverGet(linearSolver)
+    linearSolver.outputType = iron.SolverOutputTypes.NONE
+    linearSolver.linearType = iron.LinearSolverTypes.ITERATIVE
+    linearSolver.LinearIterativeMaximumIterationsSet(1000)
+else:
+    solver = iron.Solver()
+    problem.SolversCreateStart()
+    problem.SolverGet([iron.ControlLoopIdentifiers.NODE],1,solver)
+    solver.outputType = iron.SolverOutputTypes.SOLVER
+    solver.linearType = iron.LinearSolverTypes.ITERATIVE
+    solver.linearIterativeAbsoluteTolerance = 1.0E-12
+    solver.linearIterativeRelativeTolerance = 1.0E-12
 problem.SolversCreateFinish()
 
 # Create solver equations and add equations set to solver equations
