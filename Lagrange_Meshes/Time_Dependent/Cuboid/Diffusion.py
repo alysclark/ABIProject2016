@@ -9,7 +9,7 @@ from opencmiss.iron import iron
 height = 1.0
 width = 2.0
 length = 3.0
-diff_coeff = 1.0
+diff_coeff = 0.225
 initial_conc= 0.5
 start_time = 0.0 
 end_time = 1.0
@@ -33,7 +33,9 @@ numberGlobalXElements = 5
 numberGlobalYElements = 5
 numberGlobalZElements = 5
 
+iron.DiagnosticsSetOn(iron.DiagnosticTypes.IN,[1,2,3,4,5],"Diagnostics",["DOMAIN_MAPPINGS_LOCAL_FROM_GLOBAL_CALCULATE"])
 
+# Get the computational nodes information
 numberOfComputationalNodes = iron.ComputationalNumberOfNodesGet()
 computationalNodeNumber = iron.ComputationalNodeNumberGet()
 
@@ -53,13 +55,9 @@ region.CreateFinish()
 # Create a tri-linear lagrange basis
 basis = iron.Basis()
 basis.CreateStart(basisUserNumber)
-
-
 basis.TypeSet(iron.BasisTypes.SIMPLEX)
 basis.numberOfXi = 3
-#basis.interpolationXi = [iron.BasisInterpolationSpecifications.LINEAR_LAGRANGE]*3
 basis.interpolationXi = [iron.BasisInterpolationSpecifications.LINEAR_SIMPLEX]*3
-#basis.quadratureNumberOfGaussXi = [2]*3
 basis.CreateFinish()
 
 # Create a generated mesh
@@ -128,7 +126,7 @@ materialField.ComponentInterpolationSet(iron.FieldVariableTypes.U,3,iron.FieldIn
 
 equationsSet.MaterialsCreateFinish()
 
-## I believe this will change the diffusion coeff
+# Changing diffusion coefficient
 materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,1,diff_coeff)
 materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,2,diff_coeff)
 materialField.ComponentValuesInitialiseDP(iron.FieldVariableTypes.U,iron.FieldParameterSetTypes.VALUES,3,diff_coeff)
@@ -156,6 +154,7 @@ problem.ControlLoopCreateStart()
 controlLoop = iron.ControlLoop()
 problem.ControlLoopGet([iron.ControlLoopIdentifiers.NODE],controlLoop)
 controlLoop.TimesSet(start_time,end_time,time_step)
+controlLoop.OutputTypeSet(iron.ControlLoopOutputTypes.TIMING)
 controlLoop.TimeOutputSet(screen_output_freq)
 problem.ControlLoopCreateFinish()
 
@@ -163,7 +162,6 @@ problem.ControlLoopCreateFinish()
 dynamicsolver = iron.Solver()
 problem.SolversCreateStart()
 problem.SolverGet([iron.ControlLoopIdentifiers.NODE],1,dynamicsolver)
-#dynamicsolver.outputType = iron.SolverOutputTypes.MATRIX
 dynamicsolver.outputType = iron.SolverOutputTypes.PROGRESS
 linearSolver=iron.Solver()
 dynamicsolver.DynamicLinearSolverGet(linearSolver)
@@ -172,7 +170,7 @@ linearSolver.linearType = iron.LinearSolverTypes.ITERATIVE
 linearSolver.LinearIterativeMaximumIterationsSet(1000)
 problem.SolversCreateFinish()
 
-## Create solver equations and add equations set to solver equations
+# Create solver equations and add equations set to solver equations
 solver = iron.Solver()
 solverEquations = iron.SolverEquations()
 problem.SolverEquationsCreateStart()
@@ -182,7 +180,7 @@ solverEquations.sparsityType = iron.SolverEquationsSparsityTypes.SPARSE
 equationsSetIndex = solverEquations.EquationsSetAdd(equationsSet)
 problem.SolverEquationsCreateFinish()
 
-## Create boundary conditions and set first and last nodes to 0.0 and 1.0
+# Create boundary conditions and set first and last nodes to 0.0 and 1.0
 boundaryConditions = iron.BoundaryConditions()
 solverEquations.BoundaryConditionsCreateStart(boundaryConditions)
 firstNodeNumber=1
@@ -197,11 +195,8 @@ if lastNodeDomain == computationalNodeNumber:
     boundaryConditions.SetNode(dependentField,iron.FieldVariableTypes.U,1,1,lastNodeNumber,1,iron.BoundaryConditionsTypes.FIXED,1.0)
 solverEquations.BoundaryConditionsCreateFinish()
 
-## Solve the problem
-
-iron.DiagnosticsSetOn(1,[1,2,3,4,5],"Diagnostics",["all"])
+# Solve the problem
 problem.Solve()
-# iron.DiagnosticsSetOff()
 
 # Export results
 baseName = "Diffusion"
